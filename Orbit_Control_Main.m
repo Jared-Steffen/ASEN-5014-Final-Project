@@ -1,7 +1,7 @@
 clc; clear; close all
 
 %% OL SS System
-opengl('save','software')
+%opengl('save','software')
 % Constants
 mu = 3.986e5; % km^3/s^2
 r0 = 6678; % km
@@ -196,8 +196,8 @@ z0 = [0;0];
 
 x0_obs = [delta_x0; z0; e0];
 
-robs1 = rt1(:,1:2);
-robs2 = rt2(:,1:2);
+robs1 = delta_rt1(:,1:2);
+robs2 = delta_rt2(:,1:2);
 
 [y_obs1, ~, x_obs1] = lsim(aug_CL_obs_sys, robs1, tspan, x0_obs);
 [y_obs2, ~, x_obs2] = lsim(aug_CL_obs_sys, robs2, tspan, x0_obs);
@@ -218,7 +218,7 @@ U_obs2 = U_obs2';
 
 %plotting
 %output response
-Plot_Outputs(tspan,[y_obs1,y_obs2],[rt1,rt2], 'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
+Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2], 'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
 %thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
 
@@ -245,8 +245,8 @@ z0 = [0;0];
 
 x0_obs = [0.2*delta_x0; z0; e0];
 
-robs1 = rt1(:,1:2);
-robs2 = rt2(:,1:2);
+robs1 = delta_rt1(:,1:2);
+robs2 = delta_rt2(:,1:2);
 
 [y_obs1, ~, x_obs1] = lsim(aug_CL_obs_sys, robs1, tspan, x0_obs);
 [y_obs2, ~, x_obs2] = lsim(aug_CL_obs_sys, robs2, tspan, x0_obs);
@@ -267,7 +267,7 @@ U_obs2 = U_obs2';
 
 %plotting
 %output response
-Plot_Outputs(tspan,[y_obs1,y_obs2],[rt1,rt2], 'Zero Initial Error: Integral Control + Luenberger Observer Outputs');
+Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2], 'Zero Initial Error: Integral Control + Luenberger Observer Outputs');
 %thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Zero Initial Error: Integral Control + Observer Thruster Response');
 

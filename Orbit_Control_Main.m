@@ -1,6 +1,7 @@
 clc; clear; close all
 
 %% OL SS System
+opengl('save','software')
 % Constants
 mu = 3.986e5; % km^3/s^2
 r0 = 6678; % km
@@ -59,12 +60,12 @@ Daug_OL = [D,Dd];
 OLsys = ss(A,Baug_OL,C,Daug_OL);
 
 %% Full Input Profiles
-rt1 = [rt_km(:),zeros(length(tspan),1),dt(:)]; % First thruster only
-rt2 = [zeros(length(tspan),1),rt_rad(:),dt(:)]; % Second thruster only
+delta_rt1 = [rt_km(:),zeros(length(tspan),1),dt(:)]; % First thruster only
+delta_rt2 = [zeros(length(tspan),1),rt_rad(:),dt(:)]; % Second thruster only
 
 %% Simulate OL Dynamics
-[y_OL1,~,x_OL1] = lsim(OLsys,zeros(size(rt1)),tspan,delta_x0);
-[y_OL2,~,x_OL2] = lsim(OLsys,zeros(size(rt2)),tspan,delta_x0);
+[y_OL1,~,x_OL1] = lsim(OLsys,zeros(size(delta_rt1)),tspan,delta_x0);
+[y_OL2,~,x_OL2] = lsim(OLsys,zeros(size(delta_rt2)),tspan,delta_x0);
 
 %% Determine Reachability and Observability (and Their Subspaces)
 % Determine Reachability and Observability
@@ -79,7 +80,7 @@ rangeOb = orth(Ob);
 
 %% Manual Pole Placement Simulation
 % % Desired Pole Locations and Feedback Gain
-% des_poles = [-0.00137 -0.00136 -0.00135 -0.00128];
+% des_poles = [-0.00277 -0.00276 -0.00275 -0.0018];
 % K = place(A,B,des_poles);
 % 
 % % Feedforward Gain
@@ -93,12 +94,12 @@ rangeOb = orth(Ob);
 % CLsys = ss(A_CL,B_CL,C_CL,D_CL);
 % 
 % % Simulate Augmented CL Dynamics
-% [yaug_CL1,~,xaug_CL1] = lsim(CLsys,rt1,tspan,delta_x0);
-% [yaug_CL2,~,xaug_CL2] = lsim(CLsys,rt2,tspan,delta_x0);
+% [yaug_CL1,~,xaug_CL1] = lsim(CLsys,delta_rt1,tspan,delta_x0);
+% [yaug_CL2,~,xaug_CL2] = lsim(CLsys,delta_rt2,tspan,delta_x0);
 % 
 % % Calculate Input u(t)
-% u1_aug = -K*xaug_CL1'+F*rt1(:,1:2)';
-% u2_aug = -K*xaug_CL2'+F*rt2(:,1:2)';
+% u1_aug = -K*xaug_CL1'+F*delta_rt1(:,1:2)';
+% u2_aug = -K*xaug_CL2'+F*delta_rt2(:,1:2)';
 % u1_aug = u1_aug';
 % u2_aug = u2_aug';
 
@@ -112,7 +113,9 @@ C_aug_OL = [C zeros(2,2)];
 D_aug_OL = zeros(2,2);
 
 P_OL = ctrb(A_aug_OL,B_aug_OL);
-rank(P_OL);
+O_OL = obsv(A_aug_OL,C_aug_OL);
+rank(P_OL)
+
 
 % Unity feedforward gain
 F_aug = [zeros(size(B));
@@ -130,8 +133,8 @@ D_aug_CL = [D_aug_OL,[0;0]];
 aug_CL_sys = ss(A_aug_CL,B_aug_CL,C_aug_CL,D_aug_CL);
 
 % Simulate Augmented CL Dynamics
-[yaug_CL1,~,xaug_CL1] = lsim(aug_CL_sys,rt1,tspan,delta_x0_int_cont);
-[yaug_CL2,~,xaug_CL2] = lsim(aug_CL_sys,rt2,tspan,delta_x0_int_cont);
+[yaug_CL1,~,xaug_CL1] = lsim(aug_CL_sys,delta_rt1,tspan,delta_x0_int_cont);
+[yaug_CL2,~,xaug_CL2] = lsim(aug_CL_sys,delta_rt2,tspan,delta_x0_int_cont);
 
 % Calculate Input u(t)
 u1_aug = -K_aug*xaug_CL1';
@@ -141,16 +144,25 @@ u2_aug = u2_aug';
 
 %% Plots
 % OL Ouput Reponse
-Plot_Outputs(tspan,[y_OL1,y_OL2],[rt1,rt2],'Open Loop Response')
+Plot_Outputs(tspan,[y_OL1,y_OL2],[delta_rt1,delta_rt2],'Open Loop Response')
 
 % Output Responses CL Integral Control
-Plot_Outputs(tspan,[yaug_CL1,yaug_CL2],[rt1,rt2],'Integral Control Ouputs')
+% Plot_Outputs(tspan,[yaug_CL1,yaug_CL2],[delta_rt1,delta_rt2],...
+%     'Feedforward Input Conditioning Control Ouputs')
+Plot_Outputs(tspan,[yaug_CL1,yaug_CL2],[delta_rt1,delta_rt2],...
+    'Integral Control Ouputs')
 
 % Actuator Responses CL Integral Control
+% Plot_Thruster_Reponses(tspan,[u1_aug,u2_aug],u_max,...
+%     'Feedforward Input Conditioning Thruster Response')
 Plot_Thruster_Reponses(tspan,[u1_aug,u2_aug],u_max,...
     'Integral Control Thruster Response')
 
 % States CL Integral Control
+% Plot_States(tspan,xaug_CL1,'r_1(t)',...
+%     'CL Feedforward Input Conditioning Control Response for r_1(t)')
+% Plot_States(tspan,xaug_CL2,'r_2(t)',...
+%     'CL Feedforward Input Conditioning Control Response for r_2(t)')
 Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 

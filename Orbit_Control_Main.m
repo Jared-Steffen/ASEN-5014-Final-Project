@@ -167,37 +167,50 @@ Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 
 %Question 5: Luenberger Observer
-des_poles_obs = 4 * [-0.00279 -0.00278 -0.00277 -0.00276];
+des_poles_obs = 4 * [-0.00279 -0.00278 -0.00277 -0.00276 -0.00275];
+
+Aext = [A  Bd;
+         zeros(1,4) 0];
+
+Cext = [C zeros(2,1)];
+
+Kobs = [K_aug(:,1:4)  zeros(2,1)];
 
 %observer gain matrix
 %4x4
-L = place(A', C', des_poles_obs)';
+L = place(Aext', Cext', des_poles_obs)';
 
-%Augmented state matrix with observer error states
-%10x10
-A_aug_CL_obs = [A_aug_CL B_aug_OL*K_aug(:,1:4);
-    zeros(4,6) A-L*C];
+Aerr = Aext - L * Cext;% 5x5
 
-%10x2
-B_aug_CL_obs = [F_aug;
-    zeros(4,2)];
+% top-right block: effect of e on plant through u = -K_aug[x;z] - ...
+Axe = B_aug_OL * Kobs; % 6x2 * 2x5 = 6x5
 
-%2x10
-C_aug_CL_obs = [C, zeros(2,6)];
+% full A matrix (11x11): [x; z; ex; ed]
+A_aug_CL_obs = [ A_aug_CL    Axe;
+                 zeros(5,6)  Aerr ];
 
-D_aug_CL_obs = D;
+% B: reference inputs (2) + disturbance input (1) to plant; none to error
+Bd_aug = [Bd; 0; 0];                % 6x1
+B_aug_CL_obs = [F_aug, Bd_aug;     % top: plant+integrator
+                 zeros(5,3) ];      % bottom: error dynamics have no direct input
+
+% C: outputs depend only on plant states x (first 4 states)
+C_aug_CL_obs = [C zeros(2,2)  zeros(2,5) ];   % 2x11
+
+% D: 2 outputs, 3 inputs (rt1, rt2, d)
+D_aug_CL_obs = zeros(2,3);
 
 aug_CL_obs_sys = ss(A_aug_CL_obs, B_aug_CL_obs, C_aug_CL_obs, D_aug_CL_obs);
 
 %initial values
 %nonzero initial error
-e0 = [1e-3; 1e-6; 1e-4; 1e-6];
+e0 = [1e-4; 1e-7; 1e-5; 1e-7; 0];
 z0 = [0;0];
 
 x0_obs = [delta_x0; z0; e0];
 
-robs1 = delta_rt1(:,1:2);
-robs2 = delta_rt2(:,1:2);
+robs1 = delta_rt1;
+robs2 = delta_rt2;
 
 [y_obs1, ~, x_obs1] = lsim(aug_CL_obs_sys, robs1, tspan, x0_obs);
 [y_obs2, ~, x_obs2] = lsim(aug_CL_obs_sys, robs2, tspan, x0_obs);
@@ -206,13 +219,11 @@ robs2 = delta_rt2(:,1:2);
 x1_obs = x_obs1(:, 1:4);
 x2_obs = x_obs2(:, 1:4);
 
-%extracting error
-e1_obs = x_obs1(:, 7:10);
-e2_obs = x_obs2(:, 7:10);
-
 %actuator efforts
-U_obs1 = -[K_aug, K_aug(:,1:4)] * x_obs1';
-U_obs2 = -[K_aug, K_aug(:,1:4)] * x_obs2';
+K_comb = [K_aug, K_aug(:,1:4), zeros(2,1)];   % 2x11
+
+U_obs1 = -K_comb * x_obs1';
+U_obs2 = -K_comb * x_obs2';
 U_obs1 = U_obs1';
 U_obs2 = U_obs2';
 
@@ -222,31 +233,42 @@ Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2], 'Non-Zero Initial Erro
 %thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
 
-%this plotting format was taken from my hw
+% extracting error 
+e1_obs = x_obs1(:, 7:10);
+e1_d   = x_obs1(:, 11);
+e2_obs = x_obs2(:, 7:10);
+e2_d   = x_obs2(:, 11);
+
 figure;
-state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]', '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]'};
-for i = 1:4
-    subplot(4,1,i); 
+state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]', '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]', '$e_d$'};
+
+for i = 1:5
+    subplot(5,1,i); 
     hold on; 
     grid on;
-    plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+    if i <= 4
+        plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+    else
+        plot(tspan, e1_d,'LineWidth',1.4);
+    end
     ylabel(state_labels{i},'Interpreter','latex');
     if i==1
-        title('Non-Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
+        title('Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
     end
-    if i==4
+    if i==5
         xlabel('Time [s]');
     end
 end
 
+
 %zero error
-e0 = zeros(4,1);
+e0 = zeros(5,1);
 z0 = [0;0];
 
 x0_obs = [0.2*delta_x0; z0; e0];
 
-robs1 = delta_rt1(:,1:2);
-robs2 = delta_rt2(:,1:2);
+robs1 = delta_rt1;
+robs2 = delta_rt2;
 
 [y_obs1, ~, x_obs1] = lsim(aug_CL_obs_sys, robs1, tspan, x0_obs);
 [y_obs2, ~, x_obs2] = lsim(aug_CL_obs_sys, robs2, tspan, x0_obs);
@@ -255,13 +277,11 @@ robs2 = delta_rt2(:,1:2);
 x1_obs = x_obs1(:, 1:4);
 x2_obs = x_obs2(:, 1:4);
 
-%extracting error
-e1_obs = x_obs1(:, 7:10);
-e2_obs = x_obs2(:, 7:10);
-
 %actuator efforts
-U_obs1 = -[K_aug, K_aug(:,1:4)] * x_obs1';
-U_obs2 = -[K_aug, K_aug(:,1:4)] * x_obs2';
+K_comb = [K_aug, K_aug(:,1:4), zeros(2,1)];   % 2x11
+
+U_obs1 = -K_comb * x_obs1';
+U_obs2 = -K_comb * x_obs2';
 U_obs1 = U_obs1';
 U_obs2 = U_obs2';
 
@@ -271,21 +291,32 @@ Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2], 'Zero Initial Error: I
 %thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Zero Initial Error: Integral Control + Observer Thruster Response');
 
-%this plotting format was taken from my hw
+% extracting error
+e1_obs = x_obs1(:, 7:10);
+e1_d   = x_obs1(:, 11);
+e2_obs = x_obs2(:, 7:10);
+e2_d   = x_obs2(:, 11);
+
 figure;
-state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]', '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]'};
-for i = 1:4
-    subplot(4,1,i); 
+state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]', '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]', '$e_d$'};
+
+for i = 1:5
+    subplot(5,1,i); 
     hold on; 
     grid on;
-    plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+    if i <= 4
+        plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+    else
+        plot(tspan, e1_d,'LineWidth',1.4);
+    end
     ylabel(state_labels{i},'Interpreter','latex');
     if i==1
         title('Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
     end
-    if i==4
+    if i==5
         xlabel('Time [s]');
     end
 end
+
 
 

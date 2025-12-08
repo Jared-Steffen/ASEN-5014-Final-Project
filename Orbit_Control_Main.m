@@ -182,22 +182,18 @@ L = place(Aext', Cext', des_poles_obs)';
 
 Aerr = Aext - L * Cext;% 5x5
 
-% top-right block: effect of e on plant through u = -K_aug[x;z] - ...
 Axe = B_aug_OL * Kobs; % 6x2 * 2x5 = 6x5
 
 % full A matrix (11x11): [x; z; ex; ed]
 A_aug_CL_obs = [ A_aug_CL    Axe;
                  zeros(5,6)  Aerr ];
 
-% B: reference inputs (2) + disturbance input (1) to plant; none to error
-Bd_aug = [Bd; 0; 0];                % 6x1
-B_aug_CL_obs = [F_aug, Bd_aug;     % top: plant+integrator
-                 zeros(5,3) ];      % bottom: error dynamics have no direct input
+Bd_aug = [Bd; 0; 0]; % 6x1
+B_aug_CL_obs = [F_aug, Bd_aug;
+                 zeros(5,3) ];
 
-% C: outputs depend only on plant states x (first 4 states)
 C_aug_CL_obs = [C zeros(2,2)  zeros(2,5) ];   % 2x11
 
-% D: 2 outputs, 3 inputs (rt1, rt2, d)
 D_aug_CL_obs = zeros(2,3);
 
 aug_CL_obs_sys = ss(A_aug_CL_obs, B_aug_CL_obs, C_aug_CL_obs, D_aug_CL_obs);

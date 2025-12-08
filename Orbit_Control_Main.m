@@ -167,7 +167,7 @@ Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 
 %Question 5: Luenberger Observer
-des_poles_obs = 2 * [-0.00279 -0.00278 -0.00277 -0.00276 -0.00275];
+des_poles_obs = 4 * [-0.0279 -0.0278 -0.0277 -0.0276 -0.0275];
 
 Aext = [A  Bd;
          zeros(1,4) 0];
@@ -320,13 +320,13 @@ end
 
 %% LQR - No Observer
 % Tuning knobs
-alphas = [1 3 0.1 3 0.3 1];
+alphas = [1 3 2 0.1 0.3 5];
 alphas = alphas./sum(alphas);
-xmax = [0.2 0.01 1e-5 1e-2 0.02 6e-3];
+xmax = [0.2 0.01 5e-6 1e-2 0.02 6e-3];
 
 Q = diag(alphas.^2./xmax.^2);
 
-rho = 1;
+rho = 50;
 
 R = rho.*diag([0.5/(u_max^2) 0.5/(u_max^2)]);
 

@@ -167,7 +167,7 @@ Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 
 %Question 5: Luenberger Observer
-des_poles_obs = 4 * [-0.00279 -0.00278 -0.00277 -0.00276 -0.00275];
+des_poles_obs = 2 * [-0.00279 -0.00278 -0.00277 -0.00276 -0.00275];
 
 Aext = [A  Bd;
          zeros(1,4) 0];
@@ -317,6 +317,102 @@ for i = 1:5
         xlabel('Time [s]');
     end
 end
+
+%% LQR - No Observer
+% Tuning knobs
+alphas = [1 3 0.1 3 0.3 1];
+alphas = alphas./sum(alphas);
+xmax = [0.2 0.01 1e-5 1e-2 0.02 6e-3];
+
+Q = diag(alphas.^2./xmax.^2);
+
+rho = 1;
+
+R = rho.*diag([0.5/(u_max^2) 0.5/(u_max^2)]);
+
+[Kaug_LQR,Waug_LQR,CLevals] = lqr(A_aug_OL,B_aug_OL,Q,R);
+
+% CL Augmented SS Matrices
+A_augCL_LQR = A_aug_OL-B_aug_OL*Kaug_LQR;
+B_aug_CL = [F_aug,[Bd;0;0]];
+C_aug_CL = C_aug_OL;
+D_aug_CL = [D_aug_OL,[0;0]];
+aug_CL_sys = ss(A_augCL_LQR,B_aug_CL,C_aug_CL,D_aug_CL);
+
+% Simulate Augmented CL Dynamics
+[yaug_CL1_LQR,~,xaug_CL1_LQR] = lsim(aug_CL_sys,delta_rt1,tspan,delta_x0_int_cont);
+[yaug_CL2_LQR,~,xaug_CL2_LQR] = lsim(aug_CL_sys,delta_rt2,tspan,delta_x0_int_cont);
+
+% Calculate Input u(t)
+u1_aug_LQR = -Kaug_LQR*xaug_CL1_LQR';
+u2_aug_LQR = -Kaug_LQR*xaug_CL2_LQR';
+u1_aug_LQR = u1_aug_LQR';
+u2_aug_LQR = u2_aug_LQR';
+
+% Output Responses CL Integral Control
+Plot_Outputs(tspan,[yaug_CL1_LQR,yaug_CL2_LQR],[delta_rt1,delta_rt2],...
+    'LQR Control Ouputs')
+
+% Actuator Responses CL Integral Control
+Plot_Thruster_Reponses(tspan,[u1_aug_LQR,u2_aug_LQR],u_max,...
+    'LQR Control Thruster Response')
+
+
+%% LQR - Observer
+Faug = [zeros(size(B));
+        eye(2);
+        zeros(4,2)];
+
+%augment for observer error states
+A_augCL_LQR = [A_aug_OL-B_aug_OL*Kaug_LQR, B_aug_OL*[Kaug_LQR(:,1:4),zeros(2,1)];
+               zeros(5,6) Aerr];
+
+aug_CL_sysLQR = ss(A_augCL_LQR,[B_aug_CL;zeros(5,3)],[C_aug_CL,zeros(2,5)],D_aug_CL);
+
+[yaug_CL1_LQR2,~,xaug_CL1_LQR2] = lsim(aug_CL_sysLQR, robs1, tspan, x0_obs);
+[yaug_CL2_LQR2,~,xaug_CL2_LQR2] = lsim(aug_CL_sysLQR, robs2, tspan, x0_obs);
+
+%extracting states
+% x1 = xaug_CL1_LQR2(:, 1:4);
+% x2 = xaug_CL2_LQR2(:, 1:4);
+
+%actuator efforts
+K_comb = [Kaug_LQR, Kaug_LQR(:,1:4), zeros(2,1)];   % 2x11
+
+U_obs1 = -K_comb * xaug_CL1_LQR2';
+U_obs2 = -K_comb * xaug_CL2_LQR2';
+U_obs1 = U_obs1';
+U_obs2 = U_obs2';
+
+%plotting
+%output response
+Plot_Outputs(tspan,[yaug_CL1_LQR2,yaug_CL2_LQR2],[delta_rt1,delta_rt2], 'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
+%thruster response
+Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

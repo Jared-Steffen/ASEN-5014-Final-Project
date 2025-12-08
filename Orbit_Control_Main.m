@@ -148,9 +148,9 @@ Plot_Outputs(tspan,[y_OL1,y_OL2],[delta_rt1,delta_rt2],'Open Loop Response')
 
 % Output Responses CL Integral Control
 % Plot_Outputs(tspan,[yaug_CL1,yaug_CL2],[delta_rt1,delta_rt2],...
-%     'Feedforward Input Conditioning Control Ouputs')
+%     'Feedforward Input Conditioning Control Outputs')
 Plot_Outputs(tspan,[yaug_CL1,yaug_CL2],[delta_rt1,delta_rt2],...
-    'Integral Control Ouputs')
+    'Integral Control Outputs')
 
 % Actuator Responses CL Integral Control
 % Plot_Thruster_Reponses(tspan,[u1_aug,u2_aug],u_max,...
@@ -167,7 +167,7 @@ Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 
 %% Question 5: Luenberger Observer
-des_poles_obs = 4*[-0.00279 -0.00278 -0.00277 -0.00276 -0.00275]; %4 used initially
+des_poles_obs = 2*[-0.00279 -0.00278 -0.00277 -0.00276 -0.00275]; %4 used initially
 
 Aext = [A  Bd;
          zeros(1,4) 0];
@@ -200,7 +200,7 @@ aug_CL_obs_sys = ss(A_aug_CL_obs, B_aug_CL_obs, C_aug_CL_obs, D_aug_CL_obs);
 
 %initial values
 %nonzero initial error
-e0 = 0.1.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 10% of ICs
+e0 = 0.25.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 25% of ICs
 z0 = [0;0];
 
 x0_obs = [delta_x0; z0; e0];
@@ -223,7 +223,7 @@ U_obs2 = U_obs2';
 %output response
 Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2],...
     'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
-%thruster response
+% thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max,...
     'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
 
@@ -242,16 +242,16 @@ for i = 1:5
     hold on; 
     grid on;
     if i <= 4
-        plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+        plot(tspan/3600, e1_obs(:,i),'LineWidth',1.4);
     else
-        plot(tspan, e1_d,'LineWidth',1.4);
+        plot(tspan/3600, e1_d,'LineWidth',1.4);
     end
     ylabel(state_labels{i},'Interpreter','latex');
     if i==1
-        title('Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
+        title('Non-Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
     end
     if i==5
-        xlabel('Time [s]');
+        xlabel('Time [hr]');
     end
 end
 
@@ -303,35 +303,28 @@ for i = 1:5
     hold on; 
     grid on;
     if i <= 4
-        plot(tspan, e1_obs(:,i),'LineWidth',1.4);
+        plot(tspan/3600, e1_obs(:,i),'LineWidth',1.4);
     else
-        plot(tspan, e1_d,'LineWidth',1.4);
+        plot(tspan/3600, e1_d,'LineWidth',1.4);
     end
     ylabel(state_labels{i},'Interpreter','latex');
     if i==1
         title('Zero Initial Error: Observer State Estimation Error e(t) for r_1 step');
     end
     if i==5
-        xlabel('Time [s]');
+        xlabel('Time [hr]');
     end
 end
 
 %% LQR
 
 % Tuning knobs
-% alphas = [60 10 40 3 3 2];
-% alphas = alphas./sum(alphas);
-% xmax = [0.22 2.2 1e-3 1.1e-3 0.1 1e-4];
-% Q = diag(alphas.^2./xmax.^2);
-% rho = 75;
-% R = rho.*diag([0.25/(u_max^2) 0.75/(u_max^2)]);
-alphas = [30 10 20 3 2 1];
+alphas = [30 10 20 3 3 1.5];
 alphas = alphas./sum(alphas);
-xmax = [0.22 2.2e-2 1.1e-5 1.1e-6 1 1.5e-4];
+xmax = [0.22 2.2e-2 1.1e-5 1.1e-6 1 1.55e-4];
 Q = diag(alphas.^2./xmax.^2);
-rho = 78;
-R = rho.*diag([0.2/(u_max^2) 0.8/(u_max^2)]);
-
+rho = 80;
+R = rho.*diag([0.5/(u_max^2) 0.5/(u_max^2)]);
 
 % No Observer
 [Kaug_LQR,Waug_LQR,CLevals] = lqr(A_aug_OL,B_aug_OL,Q,R);
@@ -366,8 +359,7 @@ aug_CL_sysLQR = ss(A_augCL_LQR,[B_aug_CL;zeros(5,3)],[C_aug_CL,zeros(2,5)],D_aug
 
 %initial values
 %nonzero initial error
-% e0 = [1e-4; 1e-7; 1e-4; 1e-7; 0];
-e0 = 0.1.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 10% of ICs
+e0 = 0.25.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 25% of ICs
 z0 = [0;0];
 
 x0_obs = [delta_x0; z0; e0];
@@ -392,8 +384,8 @@ Plot_Outputs(tspan,[yaug_CL1_LQR2,yaug_CL2_LQR2],[delta_rt1,delta_rt2], ...
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, ...
     'Non-Zero Initial Error: LQR Integral Control + Luenberger Observer Thruster Response');
 %states
-% Plot_States(tspan,xaug_CL1_LQR2,'r_1(t)','CL LQR Control Response for r_1(t)')
-% Plot_States(tspan,xaug_CL2_LQR2,'r_2(t)','CL LQR Control Response for r_2(t)')
+Plot_States(tspan,xaug_CL1_LQR2,'r_1(t)','CL LQR Control Response for r_1(t)')
+Plot_States(tspan,xaug_CL2_LQR2,'r_2(t)','CL LQR Control Response for r_2(t)')
 
 
 

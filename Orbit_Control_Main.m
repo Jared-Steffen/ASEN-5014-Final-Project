@@ -322,7 +322,7 @@ xmax = [0.2 0.01 1e-5 1e-2 0.02 6e-3];
 
 Q = diag(alphas.^2./xmax.^2);
 
-rho = 1;
+rho = 50;
 
 R = rho.*diag([0.5/(u_max^2) 0.5/(u_max^2)]);
 

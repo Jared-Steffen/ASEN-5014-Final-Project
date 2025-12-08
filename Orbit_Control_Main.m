@@ -1,7 +1,7 @@
 clc; clear; close all
 
 %% OL SS System
-%opengl('save','software')
+
 % Constants
 mu = 3.986e5; % km^3/s^2
 r0 = 6678; % km
@@ -32,14 +32,14 @@ D = [0 0;
 % Time Vector
 T = (2*pi)/sqrt(mu/r0^3);
 delta_t = 10;
-tspan = 0:delta_t:2.5*T;
+tspan = 0:delta_t:4*T;
 
 % Max Acceleration from Thruster
 u_max = 1e-3 * 1e-3;
 
 % Reference Tracking
-rt_km = 0.2*sign(double(tspan > 5340));
-rt_rad = 0.0001*sign(double(tspan > 5340));
+rt_km = 0.2*sign(double(tspan > 10680));
+rt_rad = 0.0001*sign(double(tspan > 10680));
 
 %% Disturbance Profile
 % Constant Bias (due to Drag?)
@@ -166,8 +166,8 @@ Plot_Thruster_Reponses(tspan,[u1_aug,u2_aug],u_max,...
 Plot_States(tspan,xaug_CL1,'r_1(t)','CL Integral Control Response for r_1(t)')
 Plot_States(tspan,xaug_CL2,'r_2(t)','CL Integral Control Response for r_2(t)')
 
-%Question 5: Luenberger Observer
-des_poles_obs = 4 * [-0.00279 -0.00278 -0.00277 -0.00276 -0.00275];
+%% Question 5: Luenberger Observer
+des_poles_obs = 4*[-0.00279 -0.00278 -0.00277 -0.00276 -0.00275]; %4 used initially
 
 Aext = [A  Bd;
          zeros(1,4) 0];
@@ -200,7 +200,7 @@ aug_CL_obs_sys = ss(A_aug_CL_obs, B_aug_CL_obs, C_aug_CL_obs, D_aug_CL_obs);
 
 %initial values
 %nonzero initial error
-e0 = [1e-4; 1e-7; 1e-5; 1e-7; 0];
+e0 = 0.1.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 10% of ICs
 z0 = [0;0];
 
 x0_obs = [delta_x0; z0; e0];
@@ -319,12 +319,19 @@ end
 %% LQR
 
 % Tuning knobs
-alphas = [60 10 60 10 2 2];
+% alphas = [60 10 40 3 3 2];
+% alphas = alphas./sum(alphas);
+% xmax = [0.22 2.2 1e-3 1.1e-3 0.1 1e-4];
+% Q = diag(alphas.^2./xmax.^2);
+% rho = 75;
+% R = rho.*diag([0.25/(u_max^2) 0.75/(u_max^2)]);
+alphas = [30 10 20 3 2 1];
 alphas = alphas./sum(alphas);
-xmax = [0.22 2.2 1.1e-4 1.1e-3 0.1 0.75e-4];
+xmax = [0.22 2.2e-2 1.1e-5 1.1e-6 1 1.5e-4];
 Q = diag(alphas.^2./xmax.^2);
-rho = 25;
-R = rho.*diag([0.75/(u_max^2) 0.25/(u_max^2)]);
+rho = 78;
+R = rho.*diag([0.2/(u_max^2) 0.8/(u_max^2)]);
+
 
 % No Observer
 [Kaug_LQR,Waug_LQR,CLevals] = lqr(A_aug_OL,B_aug_OL,Q,R);
@@ -357,6 +364,14 @@ A_augCL_LQR = [A_aug_OL-B_aug_OL*Kaug_LQR, B_aug_OL*[Kaug_LQR(:,1:4),zeros(2,1)]
 
 aug_CL_sysLQR = ss(A_augCL_LQR,[B_aug_CL;zeros(5,3)],[C_aug_CL,zeros(2,5)],D_aug_CL);
 
+%initial values
+%nonzero initial error
+% e0 = [1e-4; 1e-7; 1e-4; 1e-7; 0];
+e0 = 0.1.*[0.01 1e-6 5e-6 1e-9 1e-9]'; % 10% of ICs
+z0 = [0;0];
+
+x0_obs = [delta_x0; z0; e0];
+
 [yaug_CL1_LQR2,~,xaug_CL1_LQR2] = lsim(aug_CL_sysLQR, robs1, tspan, x0_obs);
 [yaug_CL2_LQR2,~,xaug_CL2_LQR2] = lsim(aug_CL_sysLQR, robs2, tspan, x0_obs);
 
@@ -376,7 +391,9 @@ Plot_Outputs(tspan,[yaug_CL1_LQR2,yaug_CL2_LQR2],[delta_rt1,delta_rt2], ...
 %thruster response
 Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, ...
     'Non-Zero Initial Error: LQR Integral Control + Luenberger Observer Thruster Response');
-
+%states
+% Plot_States(tspan,xaug_CL1_LQR2,'r_1(t)','CL LQR Control Response for r_1(t)')
+% Plot_States(tspan,xaug_CL2_LQR2,'r_2(t)','CL LQR Control Response for r_2(t)')
 
 
 

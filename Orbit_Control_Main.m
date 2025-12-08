@@ -221,9 +221,11 @@ U_obs2 = U_obs2';
 
 %plotting
 %output response
-Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2], 'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
+Plot_Outputs(tspan,[y_obs1,y_obs2],[delta_rt1,delta_rt2],...
+    'Non-Zero Initial Error: Integral Control + Luenberger Observer Outputs');
 %thruster response
-Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max, 'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
+Plot_Thruster_Reponses(tspan,[U_obs1,U_obs2],u_max,...
+    'Non-Zero Initial Error: Integral Control + Observer Thruster Response');
 
 % extracting error 
 e1_obs = x_obs1(:, 7:10);
@@ -232,7 +234,8 @@ e2_obs = x_obs2(:, 7:10);
 e2_d   = x_obs2(:, 11);
 
 figure;
-state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]', '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]', '$e_d$'};
+state_labels = {'$e_{\delta r}$ [km]', '$e_{\dot{\delta r}}$ [km/s]',...
+    '$e_{\delta \theta}$ [rad]', '$e_{\dot{\delta \theta}}$ [rad/s]', '$e_d$'};
 
 for i = 1:5
     subplot(5,1,i); 
@@ -343,7 +346,7 @@ u2_aug_LQR = -Kaug_LQR*xaug_CL2_LQR';
 u1_aug_LQR = u1_aug_LQR';
 u2_aug_LQR = u2_aug_LQR';
 
-% Add Observer
+% Add Observer via Seperation Principle
 Faug = [zeros(size(B));
         eye(2);
         zeros(4,2)];
